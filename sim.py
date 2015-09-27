@@ -5,6 +5,15 @@ import simuPOP as sim
 from simuPOP import *
 
 
+strain_ids = {'834774811': 'NCIM3186',
+              '330443391': 'S288c',
+              '455768006': 'W303',
+              '759090333': 'YJM450',
+              '759134535': 'YJM451',
+              '759334484': 'YJM555',
+              '759349870': 'YJM981',
+              '874346690': 'ySR127'}
+
 def call_SNPs(alleles):
     max_a = []
     max_ct = -1
@@ -17,7 +26,7 @@ def call_SNPs(alleles):
             max_a.append(str(a))
     ref_allele = choice(max_a)
 
-    SNPs = ['1' if a != ref_allele and a != '5' else '0' for a in alleles]
+    SNPs = ['1' if a != ref_allele and a != '4' else '0' for a in alleles]
 
     return ref_allele, SNPs
 
@@ -28,14 +37,14 @@ def process_seq(seq):
     seq = seq.replace('C','2')
     seq = seq.replace('G','3')
     # not sure what to do about these...
-    seq = seq.replace('-','5')
-    seq = seq.replace('N','5')
-    seq = seq.replace('W','5')
-    seq = seq.replace('M','5')
-    seq = seq.replace('R','5')
-    seq = seq.replace('Y','5')
-    seq = seq.replace('K','5')
-    seq = seq.replace('S','5')
+    seq = seq.replace('-','4')
+    seq = seq.replace('N','4')
+    seq = seq.replace('W','4')
+    seq = seq.replace('M','4')
+    seq = seq.replace('R','4')
+    seq = seq.replace('Y','4')
+    seq = seq.replace('K','4')
+    seq = seq.replace('S','4')
     return seq
 
 
@@ -79,59 +88,58 @@ for SNPs in SNPs_by_strain.values():
     
 
 
-exit(0)
-
-seq_alleles = {}
-for strain in strains:
-    seq = ''
-    with open('S_cerevisiae_chr1/' + strain + '.chr1.fasta', 'r') as f:
-        f.readline()
-        for line in f:
-            seq += line.strip()
-    seq = seq.replace('A','0')
-    seq = seq.replace('T','1')
-    seq = seq.replace('C','2')
-    seq = seq.replace('G','3')
-    # not sure what to do about these...
-    seq = seq.replace('N','5')
-    seq = seq.replace('W','5')
-    seq = seq.replace('M','5')
-    seq = seq.replace('R','5')
-    seq = seq.replace('Y','5')
-    seq = seq.replace('K','5')
-    seq = seq.replace('S','5')
-    seq_alleles[strain] = [int(a) for a in seq]
-
-# need to align coordinates to reference (so most positions are homozygous)
-
 # create population
-pop = Population(size=2, ploidy=2, loci=100, alleleNames=['A','T','C','G','N'], infoFields=['father_idx', 'mother_idx'])
-#for i in range(0, pop.popSize(), 2):
-#    pop.individual(i).setSex(MALE)
-#    pop.individual(i+1).setSex(FEMALE)
+num_loci = 100
+pop = Population(size=2, ploidy=2, loci=num_loci, alleleNames=['A','T','C','G','N'], infoFields=['father_idx', 'mother_idx'])
+for i in range(0, pop.popSize(), 2):
+    pop.individual(i).setSex(MALE)
+    pop.individual(i+1).setSex(FEMALE)
 
-pop.individual(0).setGenotype(seq_alleles['S288c'][:100])
-pop.individual(1).setGenotype(seq_alleles['YJM451'][:100])
+strain_alleles = {}
+for k, v in strain_seqs.items():
+    strain_alleles[k] = [int(a) for a in v]
+
+print strain_alleles[0]
+
+pop.individual(0).setGenotype(strain_alleles[0][:num_loci])
+pop.individual(1).setGenotype(strain_alleles[2][:num_loci])
 
 print '\n\npre evolve:'
 dump(pop)
 
-#pop.evolve(initOps=[InitSex(), InitGenotype(freq=[.25,.25,.25,.25])], gen=2)
-#pop.evolve(initOps=[InitGenotype(freq=[.25,.25,.25,.25])], gen=2)
 pop.evolve(
         initOps=sim.InitSex(sex=(sim.MALE, sim.FEMALE)),
-        matingScheme=sim.MonogamousMating(
+        matingScheme=sim.RandomMating(
             numOffspring=2,
             sexMode=(sim.NUM_OF_MALES, 1),
             ops=[
-                    sim.MendelianGenoTransmitter(),
-                    sim.ParentsTagger(),
-                ],
+                    #sim.Recombinator(rates=.1, convMode=(sim.NUM_MARKERS, 1, 10)),
+                    sim.Recombinator(rates=.01),
+                    #sim.ParentsTagger(),
+                ]
+        ),
+        gen=2
+    )
+
+'''
+pop.evolve(
+        initOps=sim.InitSex(sex=(sim.MALE, sim.FEMALE)),
+        matingScheme=sim.HomoMating(
+        #matingScheme=sim.RandomMating(
+            #sim.SequentialParentChooser(),
+            sim.RandomParentChooser(),
+            sim.OffspringGenerator(
+                ops=[
+                        sim.Recombinator(rates=1, convMode=(sim.NUM_MARKERS, 1, 10)),
+                        #sim.ParentsTagger(),
+                    ],
+                numOffspring=2,
+                sexMode=(sim.NUM_OF_MALES, 1),
+            )
         ),
         gen=1
     )
-
-
+'''
 
 #pop.evolve(gen=5)
 
