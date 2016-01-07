@@ -74,7 +74,7 @@ if __name__ == '__main__':
             f.readline()
             line = f.readline().strip()
 
-    with open('data/SNPs.bed', 'w') as f:
+    with open('data/all_SNPs.bed', 'w') as f:
         for curr_chr, pos_s, pos_e, ancs in bed_SNPs:
             f.write('%s\t%i\t%i\t%s\n' % (curr_chr, pos_s, pos_e, ancs))
 

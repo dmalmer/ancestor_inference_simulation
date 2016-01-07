@@ -85,7 +85,7 @@ if __name__ == '__main__':
     #num_loci = 240
     num_loci = len(strain_seqs[0])
     #num_loci = 100000
-    pop = Population(size=5, ploidy=2, loci=num_loci, alleleNames=['A','T','C','G','N'], 
+    pop = Population(size=4, ploidy=2, loci=num_loci, alleleNames=['A','T','C','G','N'], 
                     #infoFields=['father_idx', 'mother_idx', 'child_idx'])
                     infoFields=['ind_id'])
     for i in range(0, pop.popSize(), 2):
@@ -99,9 +99,9 @@ if __name__ == '__main__':
 
     pop.individual(0).setGenotype(strain_alleles[3][:num_loci])
     pop.individual(1).setGenotype(strain_alleles[4][:num_loci])
-    pop.individual(2).setGenotype(strain_alleles[5][:num_loci])
-    pop.individual(3).setGenotype(strain_alleles[6][:num_loci])
-    pop.individual(4).setGenotype(strain_alleles[7][:num_loci])
+    pop.individual(2).setGenotype(strain_alleles[6][:num_loci])
+    pop.individual(3).setGenotype(strain_alleles[7][:num_loci])
+    #pop.individual(2).setGenotype(strain_alleles[5][:num_loci])
 
     #for i, indv in enumerate(pop.individuals()):
     #    print str(i) + ': ' + str(indv.genotype())
@@ -121,7 +121,7 @@ if __name__ == '__main__':
                 sim.InitSex(sex=(sim.MALE, sim.FEMALE)),
                 sim.IdTagger(),
                 ],
-            matingScheme=sim.RandomMating(
+            matingScheme=sim.RandomSelection(
                 numOffspring=2,
                 sexMode=(sim.NUM_OF_MALES, 1),
                 ops=[
