@@ -5,32 +5,6 @@ import simuPOP as sim
 from simuPOP import *
 
 
-strain_ids = {'834774811': 'NCIM3186',
-              '330443391': 'S288c',
-              '455768006': 'W303',
-              '759090333': 'YJM450',
-              '759134535': 'YJM451',
-              '759334484': 'YJM555',
-              '759349870': 'YJM981',
-              '874346690': 'ySR127'}
-
-def call_SNPs(alleles):
-    max_a = []
-    max_ct = -1
-    for a in range(4):
-        ct = alleles.count(str(a))
-        if ct > max_ct:
-            max_a = [str(a)]
-            max_ct = ct
-        elif ct == max_ct:
-            max_a.append(str(a))
-    ref_allele = choice(max_a)
-
-    SNPs = ['1' if a != ref_allele and a != '4' else '0' for a in alleles]
-
-    return ref_allele, SNPs
-
-
 def process_seq(seq):
     seq = seq.replace('A','0')
     seq = seq.replace('T','1')
@@ -47,45 +21,44 @@ def process_seq(seq):
     seq = seq.replace('S','4')
     return seq
 
+
 if __name__ == '__main__':
-    strains = ('W303', 'YJM555', 'NCIM3186', 'YJM450', 'YJM981', 'S288c', 'YJM451', 'ySR127')
+    strain_names = {'834774811': 'NCIM3186',
+                    '330443391': 'S288c',
+                    '455768006': 'W303',
+                    '759090333': 'YJM450',
+                    '759134535': 'YJM451',
+                    '759334484': 'YJM555',
+                    '759349870': 'YJM981',
+                    '874346690': 'ySR127'}
+
+    strain_ids = ('834774811', '330443391', '455768006', '759090333', '759134535', '759334484', '759349870', '874346690')
+    used_strains = ('759090333', '759134535', '759334484', '759349870', '874346690')
+    
+    recomb_rate = .0001
+    num_gens = 20
 
     # read alignment file
-    tot_alignments = 8
-    strain_seqs = {i: '' for i in range(tot_alignments)}
+    tot_alignments = len(strain_ids)
+    strain_seqs = {s_id: '' for s_id in strain_ids}
 
     with open('data/kalign-yeast.clustalw', 'r') as f:
         f.readline()
         f.readline()
         f.readline()
         line = f.readline().strip()
-        j = 0
         while line != '':
-            for i in range(tot_alignments):
-                strain_seqs[i] += process_seq(line.split()[1])
+            for _ in range(tot_alignments):
+                cols = line.split()
+                strain_seqs[cols[0]] += process_seq(cols[1])
                 line = f.readline().strip()
             f.readline()
             line = f.readline().strip()
-            j += 1
-            #if j > 3:
-            #    break
             
-    # call SNPs on alignment file and construct reference sequence
-    ref_seq = ''
-    SNPs_by_strain = {i: '' for i in range(tot_alignments)}
-    for i in range(len(strain_seqs[0])):
-        alleles = [s[i] for s in [strain_seqs[j] for j in range(tot_alignments)]]
-        ref_allele, SNPs = call_SNPs(alleles)
-
-        ref_seq += ref_allele
-        for j, s in enumerate(SNPs):
-            SNPs_by_strain[j] += s
-
     # create population
-    #num_loci = 240
-    num_loci = len(strain_seqs[0])
-    #num_loci = 100000
-    pop = Population(size=4, ploidy=2, loci=num_loci, alleleNames=['A','T','C','G','N'], 
+    num_loci = len(strain_seqs[strain_ids[0]])
+    #num_loci = 10000
+    pop = Population(size=len(used_strains), ploidy=2, loci=num_loci, alleleNames=['A','T','C','G','N'], 
                     #infoFields=['father_idx', 'mother_idx', 'child_idx'])
                     infoFields=['ind_id'])
     for i in range(0, pop.popSize(), 2):
@@ -97,57 +70,43 @@ if __name__ == '__main__':
     for k, v in strain_seqs.items():
         strain_alleles[k] = [int(a) for a in v]
 
-    pop.individual(0).setGenotype(strain_alleles[3][:num_loci])
-    pop.individual(1).setGenotype(strain_alleles[4][:num_loci])
-    pop.individual(2).setGenotype(strain_alleles[6][:num_loci])
-    pop.individual(3).setGenotype(strain_alleles[7][:num_loci])
-    #pop.individual(2).setGenotype(strain_alleles[5][:num_loci])
-
+    for i, s_id in enumerate(used_strains):
+        pop.individual(i).setGenotype(strain_alleles[s_id][:num_loci])
+    
     #for i, indv in enumerate(pop.individuals()):
     #    print str(i) + ': ' + str(indv.genotype())
     #    print str(i) + ': ' + str(len(indv.genotype()))
     #    print indv
 
-    #print ''.join([str(n) for n in strain_alleles[0][:num_loci]]).replace('0','A').replace('1','T').replace('2','C').replace('3','G').replace('4','N')
-    #print ''.join([str(n) for n in strain_alleles[2][:num_loci]]).replace('0','A').replace('1','T').replace('2','C').replace('3','G').replace('4','N')
+    print '\n\npre evolve:'
+    dump(pop)
 
-    #print '\n\npre evolve:'
-    #dump(pop)
-
-    rate = .0001
-    gens = 20
     pop.evolve(
             initOps=[
                 sim.InitSex(sex=(sim.MALE, sim.FEMALE)),
                 sim.IdTagger(),
                 ],
-            matingScheme=sim.RandomSelection(
+            matingScheme=sim.RandomMating(
                 numOffspring=2,
                 sexMode=(sim.NUM_OF_MALES, 1),
                 ops=[
-                        #sim.ParentsTagger(),
-                        #sim.IdTagger(infoFields=['child_idx']),
                         sim.IdTagger(),
-                        #sim.Recombinator(rates=.01, output='>test.log', infoFields=['father_idx', 'mother_idx', 'child_idx']),
-                        sim.Recombinator(rates=rate, output='>>data/recombs_r%s_g%i.log' % (str(rate), gens), infoFields=['ind_id']),
+                        sim.Recombinator(rates=recomb_rate, output='>>data/recombs_r%s_g%i.log' % (str(recomb_rate), num_gens), 
+                                         infoFields=['ind_id']),
 
                     ]
             ),
-            gen=gens
+            gen=num_gens
         )
 
     #print pop.subPopSize()
 
-    #print '\n\npost evolve:'
-    #dump(pop)
+    print '\n\npost evolve:'
+    dump(pop)
 
     #for i, indv in enumerate(pop.individuals()):
     #    print str(i) + ': ' + str(indv.genotype(chroms=0))
     #    print str(i) + ': ' + str(len(indv.genotype(chroms=0)))
     #    print indv
 
-    print 'strain_alleles'
-    print len(strain_alleles[0][:num_loci])
-
-    print len(ref_seq)
 
