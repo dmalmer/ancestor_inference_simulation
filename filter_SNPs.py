@@ -1,6 +1,6 @@
 
 
-ancs = ('YJM450', 'YJM451', 'YJM981', 'ySR127', 'DESC')
+ancs = ('YJM450', 'YJM451', 'YJM981', 'YJM555', 'ySR127', 'DESC')
 unk = 'YJM981'
 
 with open('data/sim_SNPs.bed', 'w') as f_out:

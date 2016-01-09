@@ -18,7 +18,7 @@ if __name__ == '__main__':
     bed_SNPs = [] #list of lists: [[chr, pos, pos+1, ancestors],...]
     counts = defaultdict(int)
 
-    with open('data/descendant_seq.nuc', 'r') as f:
+    with open('data/desc_seq.nuc', 'r') as f:
         descendant = f.readline().strip()
 
     desc_ind = 0
