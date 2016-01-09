@@ -2,7 +2,7 @@
 Ancestor HMM yeast breeding simulation
 
 sim.py -> data/recombs_r<rate>_g<gen>.log
-haplotype_desc.py -> data/descendant_seq.nuc (need to change RECOMB_FILE var)
+haplotype_desc.py (need to change RECOMB_FILE var) -> data/desc_seq.nuc, data/desc_segments.bed
 call_SNPs.py -> data/all_SNPs.bed
 filter_SNPs.py -> data/sim_SNPs.bed
 

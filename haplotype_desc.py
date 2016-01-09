@@ -36,7 +36,7 @@ next generations will have recombination events:
 
 from itertools import tee, izip
 
-RECOMB_FILE = 'data/recombs_r0.0001_g10.log'
+RECOMB_FILE = 'data/recombs_r0.0001_g20.log'
 
 def pairwise(iterable):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
@@ -45,6 +45,7 @@ def pairwise(iterable):
     return izip(a, b)
 
 if __name__ == '__main__':
+    # re-trace what parts of each genome came from which ancestor using the recombination file output by simuPOP
     genomes = [] #index+1 = indv ID
     with open(RECOMB_FILE,'r') as f:
         cols = f.readline().strip().split()
@@ -62,13 +63,6 @@ if __name__ == '__main__':
             genomes[-1][1] = [[0],[int(cols[1])]]  
             
             cols = f.readline().strip().split()
-        
-        #print '6:'
-        #print genomes[5][0]
-        #print genomes[5][1]
-        #print '7:'
-        #print genomes[6][0]
-        #print genomes[6][1]
 
         #set rest of genomes
         while len(cols) > 0:
@@ -114,22 +108,25 @@ if __name__ == '__main__':
 
                 cols = f.readline().strip().split()
 
-            print '\ngenome ' + str(len(genomes))
-            print genomes[-1][0]
-            print genomes[-1][1]
+            #print '\ngenome ' + str(len(genomes))
+            #print genomes[-1][0]
+            #print genomes[-1][1]
 
     # write out nucleotide seq of final genome
-    # subject to change, but current sim pulls in the following strains:
-    #pop.individual(0).setGenotype(strain_alleles[3][:num_loci])
-    #pop.individual(1).setGenotype(strain_alleles[4][:num_loci])
-    #pop.individual(2).setGenotype(strain_alleles[5][:num_loci])
-    #pop.individual(3).setGenotype(strain_alleles[6][:num_loci])
-    #pop.individual(4).setGenotype(strain_alleles[7][:num_loci])
-    strain_mapping = {1: 3, 2: 4, 3: 5, 4: 6, 5: 7}
-
-    # read alignment file
-    tot_alignments = 8
-    strain_seqs = {i: '' for i in range(tot_alignments)}
+    #  subject to change, but current sim pulls in the following strains:
+    used_strains = ('759090333', '759134535', '759334484', '759349870', '874346690')
+    strain_ids = {'330443391': 'S288c',
+                  '455768006': 'W303',
+                  '834774811': 'NCIM3186',
+                  '759090333': 'YJM450',
+                  '759134535': 'YJM451',
+                  '759334484': 'YJM555',
+                  '759349870': 'YJM981',
+                  '874346690': 'ySR127'}
+    
+    #  read alignment file for ancestor sequences
+    tot_alignments = len(strain_ids.keys())
+    strain_seqs = {s_id: '' for s_id in strain_ids}
 
     with open('data/kalign-yeast.clustalw', 'r') as f:
         f.readline()
@@ -137,29 +134,23 @@ if __name__ == '__main__':
         f.readline()
         line = f.readline().strip()
         while line != '':
-            for i in range(tot_alignments):
-                strain_seqs[i] += line.split()[1]
+            for _ in range(tot_alignments):
+                cols = line.split()
+                strain_seqs[cols[0]] += cols[1]
                 line = f.readline().strip()
             f.readline()
             line = f.readline().strip()
 
-    print strain_seqs[3][:100]
+    #  write descendant sequence and each segment's ancestral origin
+    num_loci = len(strain_seqs[used_strains[0]])
+    desc_seq = ''
+    with open('data/desc_segments.bed', 'w') as f:
+        for (s, e), anc in zip(pairwise(genomes[-1][0][0] + [num_loci]), genomes[-1][0][1]):
+            desc_seq += strain_seqs[used_strains[anc-1]][s:e] #ancs are indexed starting at 1 in recomb file
+            f.write('chr1\t%s\t%s\t%s\n' % (s, e, strain_ids[used_strains[anc-1]]))
+        desc_seq += '-' * (len(strain_seqs[used_strains[0]]) - len(desc_seq))
 
-    #num_loci = len(strain_seqs[0])
-    num_loci = 100000
-    descendant = ''
-    for (s, e), anc in zip(pairwise(genomes[-1][0][0] + [num_loci]), genomes[-1][0][1]):
-        #print anc
-        #print s
-        #print e
-        #print len(strain_seqs[strain_mapping[anc]][s:e])
-        descendant += strain_seqs[strain_mapping[anc]][s:e]
-    descendant += '-' * (len(strain_seqs[0]) - len(descendant))
-
-    #print len(descendant)
-    with open('data/descendant_seq.nuc', 'w') as f:
-        f.write(descendant + '\n')
-
-
+    with open('data/desc_seq.nuc', 'w') as f:
+        f.write(desc_seq + '\n')
 
 
