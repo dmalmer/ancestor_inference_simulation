@@ -4,7 +4,6 @@ from random import choice
 import simuPOP as sim
 from simuPOP import *
 
-
 def process_seq(seq):
     seq = seq.replace('A','0')
     seq = seq.replace('T','1')
@@ -32,17 +31,21 @@ if __name__ == '__main__':
                     '759349870': 'YJM981',
                     '874346690': 'ySR127'}
 
-    strain_ids = ('834774811', '330443391', '455768006', '759090333', '759134535', '759334484', '759349870', '874346690')
-    used_strains = ('759090333', '759134535', '759334484', '759349870', '874346690')
-    
-    recomb_rate = .0001
+    #alignment_file = 'data/kalign-yeast.clustalw'
+    #strain_ids = ('834774811', '330443391', '455768006', '759090333', '759134535', '759334484', '759349870', '874346690')
+    #used_strains = ('759090333', '759134535', '759334484', '759349870', '874346690')
+    strain_ids = ('gi|329138864|tp', 'gi|874346693|gb', 'gi|768752667|gb', 'gi|768739925|gb', 'gi|768744865|gb', 'gi|768740643|gb')
+    used_strains = ('gi|874346693|gb', 'gi|768752667|gb', 'gi|768739925|gb', 'gi|768744865|gb', 'gi|768740643|gb')
+    alignment_file = 'data/aligned.aln'
+
+    recomb_rate = .00001
     num_gens = 20
 
     # read alignment file
     tot_alignments = len(strain_ids)
     strain_seqs = {s_id: '' for s_id in strain_ids}
 
-    with open('data/kalign-yeast.clustalw', 'r') as f:
+    with open(alignment_file, 'r') as f:
         f.readline()
         f.readline()
         f.readline()
@@ -78,8 +81,8 @@ if __name__ == '__main__':
     #    print str(i) + ': ' + str(len(indv.genotype()))
     #    print indv
 
-    print '\n\npre evolve:'
-    dump(pop)
+    #print '\n\npre evolve:'
+    #dump(pop)
 
     pop.evolve(
             initOps=[
@@ -101,8 +104,8 @@ if __name__ == '__main__':
 
     #print pop.subPopSize()
 
-    print '\n\npost evolve:'
-    dump(pop)
+    #print '\n\npost evolve:'
+    #dump(pop)
 
     #for i, indv in enumerate(pop.individuals()):
     #    print str(i) + ': ' + str(indv.genotype(chroms=0))

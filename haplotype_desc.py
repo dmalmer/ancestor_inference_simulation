@@ -36,7 +36,6 @@ next generations will have recombination events:
 
 from itertools import tee, izip
 
-RECOMB_FILE = 'data/recombs_r0.0001_g20.log'
 
 def pairwise(iterable):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
@@ -44,7 +43,31 @@ def pairwise(iterable):
     next(b, None)
     return izip(a, b)
 
+
 if __name__ == '__main__':
+
+    RECOMB_FILE = 'data/recombs_r1e-05_g20.log'
+
+    #alignment_file = 'data/kalign-yeast.clustalw'
+    #used_strains = ('759090333', '759134535', '759334484', '759349870', '874346690')
+    #strain_ids = {'330443391': 'S288c',
+    #              '455768006': 'W303',
+    #              '834774811': 'NCIM3186',
+    #              '759090333': 'YJM450',
+    #              '759134535': 'YJM451',
+    #              '759334484': 'YJM555',
+    #              '759349870': 'YJM981',
+    #              '874346690': 'ySR127'}
+
+    alignment_file = 'data/aligned.aln'
+    used_strains = ('gi|874346693|gb', 'gi|768752667|gb', 'gi|768739925|gb', 'gi|768744865|gb', 'gi|768740643|gb')
+    strain_ids = {'gi|329138864|tp': 'S288c', 
+                  'gi|874346693|gb': 'ySR127',
+                  'gi|768752667|gb': 'YJM981', 
+                  'gi|768739925|gb': 'YJM450',
+                  'gi|768744865|gb': 'YJM555',
+                  'gi|768740643|gb': 'YJM451'}
+
     # re-trace what parts of each genome came from which ancestor using the recombination file output by simuPOP
     genomes = [] #index+1 = indv ID
     with open(RECOMB_FILE,'r') as f:
@@ -113,22 +136,11 @@ if __name__ == '__main__':
             #print genomes[-1][1]
 
     # write out nucleotide seq of final genome
-    #  subject to change, but current sim pulls in the following strains:
-    used_strains = ('759090333', '759134535', '759334484', '759349870', '874346690')
-    strain_ids = {'330443391': 'S288c',
-                  '455768006': 'W303',
-                  '834774811': 'NCIM3186',
-                  '759090333': 'YJM450',
-                  '759134535': 'YJM451',
-                  '759334484': 'YJM555',
-                  '759349870': 'YJM981',
-                  '874346690': 'ySR127'}
-    
     #  read alignment file for ancestor sequences
     tot_alignments = len(strain_ids.keys())
     strain_seqs = {s_id: '' for s_id in strain_ids}
 
-    with open('data/kalign-yeast.clustalw', 'r') as f:
+    with open(alignment_file, 'r') as f:
         f.readline()
         f.readline()
         f.readline()
