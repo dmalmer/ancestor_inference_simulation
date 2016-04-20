@@ -1,8 +1,31 @@
 
-from random import choice
-
 import simuPOP as sim
 from simuPOP import *
+
+
+def read_recomb_rates(filename, num_loci):
+    print 'reading'
+    #return list of recomb rate at each position
+    per_site_recombs = []
+    with open(filename) as f:
+        f.readline()
+        _, prev_kb_pos, _ = f.readline().strip().split(',')
+        for line in f:
+            #values in file are in 4*Ne*r/kb, where r = (physical distance (l) * per site rate of recomb (p))
+            #4*Ne*r = x, 4*Ne*l*p = x, p = x/(4*Ne*l)
+            curr_chr, curr_kb_pos, curr_rate = line.strip().split(',') 
+            region_kb_length = float(curr_kb_pos) - float(prev_kb_pos)
+            p = float(curr_rate) / (4. * (float(curr_kb_pos) - float(prev_kb_pos)))
+
+            #add rate for every position in region
+            per_site_recombs.extend([p for _ in range(int(1000. * region_kb_length))])
+
+            prev_kb_pos = curr_kb_pos
+            if curr_chr != 'chr1':
+                break
+
+    return per_site_recombs[:num_loci]
+             
 
 def process_seq(seq):
     seq = seq.replace('A','0')
@@ -37,9 +60,9 @@ if __name__ == '__main__':
     strain_ids = ('gi|329138864|tp', 'gi|874346693|gb', 'gi|768752667|gb', 'gi|768739925|gb', 'gi|768744865|gb', 'gi|768740643|gb')
     used_strains = ('gi|874346693|gb', 'gi|768752667|gb', 'gi|768739925|gb', 'gi|768744865|gb', 'gi|768740643|gb')
     alignment_file = 'data/aligned.aln'
-
-    recomb_rate = .00001
     num_gens = 20
+    recomb_file_or_val = 'data/mouse_recomb_rates.csv'
+    #recomb_file_or_val = '.00001'
 
     # read alignment file
     tot_alignments = len(strain_ids)
@@ -61,6 +84,13 @@ if __name__ == '__main__':
     # create population
     num_loci = len(strain_seqs[strain_ids[0]])
     #num_loci = 10000
+    try:
+        recomb_rates = read_recomb_rates(recomb_file_or_val, num_loci)
+        recomb_str = 'mouse'
+    except IOError:
+        recomb_rates = float(recomb_file_or_val)
+        recomb_str = str(recomb_rates)
+
     pop = Population(size=len(used_strains), ploidy=2, loci=num_loci, alleleNames=['A','T','C','G','N'], 
                     #infoFields=['father_idx', 'mother_idx', 'child_idx'])
                     infoFields=['ind_id'])
@@ -94,7 +124,7 @@ if __name__ == '__main__':
                 sexMode=(sim.NUM_OF_MALES, 1),
                 ops=[
                         sim.IdTagger(),
-                        sim.Recombinator(rates=recomb_rate, output='>>data/recombs_r%s_g%i.log' % (str(recomb_rate), num_gens), 
+                        sim.Recombinator(rates=recomb_rates, output='>>data/recombs_r%s_g%i.log' % (recomb_str, num_gens), 
                                          infoFields=['ind_id']),
 
                     ]
