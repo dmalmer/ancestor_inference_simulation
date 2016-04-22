@@ -24,7 +24,7 @@ def read_recomb_rates(filename, num_loci, chrom=None):
             #values in file are in 4*Ne*r/kb, where r = (physical distance (l) * per site rate of recomb (p))
             #4*Ne*r = x, 4*Ne*l*p = x, p = x/(4*Ne*l)
             region_kb_length = float(curr_kb_pos) - float(prev_kb_pos)
-            p = float(curr_rate) / (4. * (float(curr_kb_pos) - float(prev_kb_pos)))
+            p = (float(curr_rate) / 100.) / (4. * region_kb_length * 1000.)
 
             #add rate for every position in region
             per_site_recombs.extend([p for _ in range(int(1000. * region_kb_length))])
@@ -80,21 +80,19 @@ if __name__ == '__main__':
         with open('./data/mouse_fastas/%s_chr%i.fa' % (name, chrom)) as f:
             f.readline()
             strain_seqs[name] = f.readline().strip()
-            print len(strain_seqs[name])
             
     # read recomb rate file
     print 'reading recomb file'
     num_loci = len(strain_seqs[strain_names[0]]) if num_loci < 1 else num_loci
-    print 'num_loci = ' + str(num_loci)
     try:
         recomb_rates = read_recomb_rates(recomb_file_or_val, num_loci, 'chr%i' % chrom)
         recomb_str = 'mouse'
     except IOError:
         recomb_rates = float(recomb_file_or_val)
         recomb_str = str(recomb_rates)
-    print len(recomb_rates)
 
     # create population
+    print 'creating population' 
     pop = Population(size=pop_size, ploidy=2, loci=num_loci, alleleNames=['A','T','C','G','N'], 
                     #infoFields=['father_idx', 'mother_idx', 'child_idx'])
                     infoFields=['ind_id'])
@@ -107,11 +105,6 @@ if __name__ == '__main__':
     for i in range(pop.popSize()):
         name = strain_names[i % len(strain_names)]
         pop.individual(i).setGenotype([nuc_int(n) for n in strain_seqs[name][:num_loci]])
-    
-    #for i, indv in enumerate(pop.individuals()):
-    #    print str(i) + ': ' + str(indv.genotype())
-    #    print str(i) + ': ' + str(len(indv.genotype()))
-    #    print indv
 
     # evolve
     print 'evolving'
@@ -141,14 +134,13 @@ if __name__ == '__main__':
     #print '\n\npost evolve:'
     #dump(pop)
 
-    for i, indv in enumerate(pop.individuals()):
+    #for i, indv in enumerate(pop.individuals()):
         #print str(i) + ': ' + str(len(indv.genotype(ploidy=0)))
         #print str(i) + ': ' + str(len(indv.genotype(ploidy=1)))
         #print str(i) + ': ' + str(len(indv.genotype(chroms=0)))
         #print str(i) + ': ' + str(len(indv.genotype(chroms=1)))
         #print str(i) + ': ' + str(len(indv.genotype(chroms=2)))
         #print str(i) + ': ' + str(indv.genotype(chroms=0)[:1000])
-        pass
     #    print indv
 
 
