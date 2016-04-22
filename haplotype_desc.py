@@ -51,6 +51,8 @@ if __name__ == '__main__':
     #RECOMB_FILE = 'data/recombs_r0.01_g20.log'
 
     CHROM = 19
+    
+    COLLAPSE_FINAL_HAPLOTYPES = False
 
     # re-trace what parts of each genome came from which ancestor using the recombination file output by simuPOP
     print 'reading recomb file'
@@ -116,39 +118,46 @@ if __name__ == '__main__':
 
                 cols = f.readline().strip().split()
 
-            #print '\ngenome ' + str(len(genomes))
-            #print genomes[-1][0]
-            #print genomes[-1][1]
-
-    for g in genomes[:9]:
-        print g
-
-    # write out nucleotide seq of final genome
-    #  read alignment file for ancestor sequences
+    # output descendant sequence and ancestral haplotypes
     strain_seqs = {}
     #strain_names = ('AKRJ', 'AJ', 'BALBcJ', 'C3HHeJ', 'CASTEiJ', 'CBAJ', 'DBA2J', 'LPJ')
     strain_names = ('AKRJ', 'AJ', 'BALBcJ', 'C3HHeJ')
 
-    # read fasta files
+    #  read fasta files
     print 'reading fastas'
     for name in strain_names:
         with open('./data/mouse_fastas/%s_chr%i.fa' % (name, CHROM)) as f:
             f.readline()
             strain_seqs[name] = f.readline().strip()
-            print len(strain_seqs[name])
 
     #  write descendant sequence and each segment's ancestral origin
     print 'writing output'
     num_loci = len(strain_seqs[strain_names[0]])
-    desc_seq = ''
-    with open('data/desc_segments.bed', 'w') as f:
-        for (s, e), anc_num in zip(pairwise(genomes[-1][0][0] + [num_loci]), genomes[-1][0][1]):
-            anc_index = (anc_num-1) % len(strain_names) #ancs are indexed starting at 1 in recomb file
-            desc_seq += strain_seqs[strain_names[anc_index]][s:e] 
-            f.write('chr1\t%s\t%s\t%s\n' % (s, e, strain_names[anc_index]))
-        desc_seq += '-' * (len(strain_seqs[strain_names[0]]) - len(desc_seq))
-
+    haplotypes = [] #list of tuples, (start, end, strain_name) of each segment
     with open('data/desc_seq.nuc', 'w') as f:
-        f.write(desc_seq + '\n')
+        for (start, end), anc_num in zip(pairwise(genomes[-1][0][0] + [num_loci]), genomes[-1][0][1]):
+            anc_index = (anc_num-1) % len(strain_names) #ancs are indexed starting at 1 in recomb file
+            #write nucleotide sequence
+            f.write(strain_seqs[strain_names[anc_index]][start:end]) 
+            #record ancestral haplotype
+            haplotypes.append((start, end, strain_names[anc_index]))
+        #f.write('-' * (len(strain_seqs[strain_names[0]]) - len(desc_seq)) + '\n')
 
+    with open('data/desc_segments.bed', 'w') as f:
+        curr_start, curr_end, curr_anc = haplotypes[0]
+        for start, end, anc in haplotypes[1:]:
+            if COLLAPSE_FINAL_HAPLOTYPES:
+                #collapse adjacent haplotypes from the same ancestor strain
+                # different numbered ancestors can be the same strain (larger initial ancestor population adds diversity),
+                # so may want to collapse them together for the final bed file. these separations are still recomb
+                # events though, so may want to keep them in the final bed file.
+                if anc != curr_anc:
+                    f.write('chr%i\t%s\t%s\t%s\n' % (CHROM, curr_start, curr_end, curr_anc))
+                    curr_start, curr_end, curr_anc = start, end, anc
+                else:
+                    curr_end = end
+            else:
+                f.write('chr%i\t%s\t%s\t%s\n' % (CHROM, curr_start, curr_end, curr_anc))
+                curr_start, curr_end, curr_anc = start, end, anc
+        f.write('chr%i\t%s\t%s\t%s\n' % (CHROM, curr_start, curr_end, curr_anc))
 
