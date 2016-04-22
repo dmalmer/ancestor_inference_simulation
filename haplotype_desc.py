@@ -46,29 +46,14 @@ def pairwise(iterable):
 
 if __name__ == '__main__':
 
-    RECOMB_FILE = 'data/recombs_r1e-05_g20.log'
+    #RECOMB_FILE = 'data/recombs_r1e-05_g20.log'
+    RECOMB_FILE = 'data/recombs_rmouse_g20.log'
+    #RECOMB_FILE = 'data/recombs_r0.01_g20.log'
 
-    #alignment_file = 'data/kalign-yeast.clustalw'
-    #used_strains = ('759090333', '759134535', '759334484', '759349870', '874346690')
-    #strain_ids = {'330443391': 'S288c',
-    #              '455768006': 'W303',
-    #              '834774811': 'NCIM3186',
-    #              '759090333': 'YJM450',
-    #              '759134535': 'YJM451',
-    #              '759334484': 'YJM555',
-    #              '759349870': 'YJM981',
-    #              '874346690': 'ySR127'}
-
-    alignment_file = 'data/aligned.aln'
-    used_strains = ('gi|874346693|gb', 'gi|768752667|gb', 'gi|768739925|gb', 'gi|768744865|gb', 'gi|768740643|gb')
-    strain_ids = {'gi|329138864|tp': 'S288c', 
-                  'gi|874346693|gb': 'ySR127',
-                  'gi|768752667|gb': 'YJM981', 
-                  'gi|768739925|gb': 'YJM450',
-                  'gi|768744865|gb': 'YJM555',
-                  'gi|768740643|gb': 'YJM451'}
+    CHROM = 19
 
     # re-trace what parts of each genome came from which ancestor using the recombination file output by simuPOP
+    print 'reading recomb file'
     genomes = [] #index+1 = indv ID
     with open(RECOMB_FILE,'r') as f:
         cols = f.readline().strip().split()
@@ -135,32 +120,33 @@ if __name__ == '__main__':
             #print genomes[-1][0]
             #print genomes[-1][1]
 
+    for g in genomes[:9]:
+        print g
+
     # write out nucleotide seq of final genome
     #  read alignment file for ancestor sequences
-    tot_alignments = len(strain_ids.keys())
-    strain_seqs = {s_id: '' for s_id in strain_ids}
+    strain_seqs = {}
+    #strain_names = ('AKRJ', 'AJ', 'BALBcJ', 'C3HHeJ', 'CASTEiJ', 'CBAJ', 'DBA2J', 'LPJ')
+    strain_names = ('AKRJ', 'AJ', 'BALBcJ', 'C3HHeJ')
 
-    with open(alignment_file, 'r') as f:
-        f.readline()
-        f.readline()
-        f.readline()
-        line = f.readline().strip()
-        while line != '':
-            for _ in range(tot_alignments):
-                cols = line.split()
-                strain_seqs[cols[0]] += cols[1]
-                line = f.readline().strip()
+    # read fasta files
+    print 'reading fastas'
+    for name in strain_names:
+        with open('./data/mouse_fastas/%s_chr%i.fa' % (name, CHROM)) as f:
             f.readline()
-            line = f.readline().strip()
+            strain_seqs[name] = f.readline().strip()
+            print len(strain_seqs[name])
 
     #  write descendant sequence and each segment's ancestral origin
-    num_loci = len(strain_seqs[used_strains[0]])
+    print 'writing output'
+    num_loci = len(strain_seqs[strain_names[0]])
     desc_seq = ''
     with open('data/desc_segments.bed', 'w') as f:
-        for (s, e), anc in zip(pairwise(genomes[-1][0][0] + [num_loci]), genomes[-1][0][1]):
-            desc_seq += strain_seqs[used_strains[anc-1]][s:e] #ancs are indexed starting at 1 in recomb file
-            f.write('chr1\t%s\t%s\t%s\n' % (s, e, strain_ids[used_strains[anc-1]]))
-        desc_seq += '-' * (len(strain_seqs[used_strains[0]]) - len(desc_seq))
+        for (s, e), anc_num in zip(pairwise(genomes[-1][0][0] + [num_loci]), genomes[-1][0][1]):
+            anc_index = (anc_num-1) % len(strain_names) #ancs are indexed starting at 1 in recomb file
+            desc_seq += strain_seqs[strain_names[anc_index]][s:e] 
+            f.write('chr1\t%s\t%s\t%s\n' % (s, e, strain_names[anc_index]))
+        desc_seq += '-' * (len(strain_seqs[strain_names[0]]) - len(desc_seq))
 
     with open('data/desc_seq.nuc', 'w') as f:
         f.write(desc_seq + '\n')

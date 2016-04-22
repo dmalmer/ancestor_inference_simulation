@@ -3,17 +3,26 @@ import simuPOP as sim
 from simuPOP import *
 
 
-def read_recomb_rates(filename, num_loci):
-    print 'reading'
+def read_recomb_rates(filename, num_loci, chrom=None):
     #return list of recomb rate at each position
+    read_chrom = 'chr1' if not chrom else chrom
+
     per_site_recombs = []
     with open(filename) as f:
         f.readline()
-        _, prev_kb_pos, _ = f.readline().strip().split(',')
+        curr_chr = ''
+
+        #read until up to chromosome we care about
+        while curr_chr != read_chrom:
+            curr_chr, prev_kb_pos, _ = f.readline().strip().split(',')
+
         for line in f:
+            curr_chr, curr_kb_pos, curr_rate = line.strip().split(',') 
+            if curr_chr != read_chrom:
+                break
+
             #values in file are in 4*Ne*r/kb, where r = (physical distance (l) * per site rate of recomb (p))
             #4*Ne*r = x, 4*Ne*l*p = x, p = x/(4*Ne*l)
-            curr_chr, curr_kb_pos, curr_rate = line.strip().split(',') 
             region_kb_length = float(curr_kb_pos) - float(prev_kb_pos)
             p = float(curr_rate) / (4. * (float(curr_kb_pos) - float(prev_kb_pos)))
 
@@ -21,77 +30,72 @@ def read_recomb_rates(filename, num_loci):
             per_site_recombs.extend([p for _ in range(int(1000. * region_kb_length))])
 
             prev_kb_pos = curr_kb_pos
-            if curr_chr != 'chr1':
-                break
 
+    #fill in the last positions
+    if len(per_site_recombs) < num_loci:
+        per_site_recombs.extend([per_site_recombs[-1] for _ in range(num_loci - len(per_site_recombs))])
+
+    assert(len(per_site_recombs) > 0)
     return per_site_recombs[:num_loci]
              
 
-def process_seq(seq):
-    seq = seq.replace('A','0')
-    seq = seq.replace('T','1')
-    seq = seq.replace('C','2')
-    seq = seq.replace('G','3')
-    # not sure what to do about these...
-    seq = seq.replace('-','4')
-    seq = seq.replace('N','4')
-    seq = seq.replace('W','4')
-    seq = seq.replace('M','4')
-    seq = seq.replace('R','4')
-    seq = seq.replace('Y','4')
-    seq = seq.replace('K','4')
-    seq = seq.replace('S','4')
-    return seq
+def nuc_int(nuc):
+    if nuc == 'A':
+        return 0
+    if nuc == 'T':
+        return 1
+    if nuc == 'C':
+        return 2
+    if nuc == 'G':
+        return 3
+    return 4
+
+
+def compare_seqs(seqA, seqB):
+    assert(len(seqA) == len(seqB))
+    matches = 0
+    for a, b in zip(seqA, seqB):
+        if a == b:
+            matches += 1
+    return float(matches)/len(seqA)
 
 
 if __name__ == '__main__':
-    strain_names = {'834774811': 'NCIM3186',
-                    '330443391': 'S288c',
-                    '455768006': 'W303',
-                    '759090333': 'YJM450',
-                    '759134535': 'YJM451',
-                    '759334484': 'YJM555',
-                    '759349870': 'YJM981',
-                    '874346690': 'ySR127'}
-
-    #alignment_file = 'data/kalign-yeast.clustalw'
-    #strain_ids = ('834774811', '330443391', '455768006', '759090333', '759134535', '759334484', '759349870', '874346690')
-    #used_strains = ('759090333', '759134535', '759334484', '759349870', '874346690')
-    strain_ids = ('gi|329138864|tp', 'gi|874346693|gb', 'gi|768752667|gb', 'gi|768739925|gb', 'gi|768744865|gb', 'gi|768740643|gb')
-    used_strains = ('gi|874346693|gb', 'gi|768752667|gb', 'gi|768739925|gb', 'gi|768744865|gb', 'gi|768740643|gb')
-    alignment_file = 'data/aligned.aln'
-    num_gens = 20
+    # intialize
     recomb_file_or_val = 'data/mouse_recomb_rates.csv'
     #recomb_file_or_val = '.00001'
+    #recomb_file_or_val = '.01'
+    pop_size = 20
+    num_gens = 20
+    chrom = 19
+    num_loci = -1
 
-    # read alignment file
-    tot_alignments = len(strain_ids)
-    strain_seqs = {s_id: '' for s_id in strain_ids}
+    strain_seqs = {}
+    #strain_names = ('AKRJ', 'AJ', 'BALBcJ', 'C3HHeJ', 'CASTEiJ', 'CBAJ', 'DBA2J', 'LPJ')
+    strain_names = ('AKRJ', 'AJ', 'BALBcJ', 'C3HHeJ')
 
-    with open(alignment_file, 'r') as f:
-        f.readline()
-        f.readline()
-        f.readline()
-        line = f.readline().strip()
-        while line != '':
-            for _ in range(tot_alignments):
-                cols = line.split()
-                strain_seqs[cols[0]] += process_seq(cols[1])
-                line = f.readline().strip()
+    # read fasta files
+    print 'reading fastas'
+    for name in strain_names:
+        with open('./data/mouse_fastas/%s_chr%i.fa' % (name, chrom)) as f:
             f.readline()
-            line = f.readline().strip()
+            strain_seqs[name] = f.readline().strip()
+            print len(strain_seqs[name])
             
-    # create population
-    num_loci = len(strain_seqs[strain_ids[0]])
-    #num_loci = 10000
+    # read recomb rate file
+    print 'reading recomb file'
+    num_loci = len(strain_seqs[strain_names[0]]) if num_loci < 1 else num_loci
+    print 'num_loci = ' + str(num_loci)
     try:
-        recomb_rates = read_recomb_rates(recomb_file_or_val, num_loci)
+        recomb_rates = read_recomb_rates(recomb_file_or_val, num_loci, 'chr%i' % chrom)
         recomb_str = 'mouse'
     except IOError:
         recomb_rates = float(recomb_file_or_val)
         recomb_str = str(recomb_rates)
+    print len(recomb_rates)
 
-    pop = Population(size=len(used_strains), ploidy=2, loci=num_loci, alleleNames=['A','T','C','G','N'], 
+    # create population
+    pop = Population(size=pop_size, ploidy=2, loci=num_loci, alleleNames=['A','T','C','G','N'], 
                     #infoFields=['father_idx', 'mother_idx', 'child_idx'])
                     infoFields=['ind_id'])
     for i in range(0, pop.popSize(), 2):
@@ -99,18 +103,18 @@ if __name__ == '__main__':
         if i != pop.popSize()-1:
             pop.individual(i+1).setSex(FEMALE)
 
-    strain_alleles = {}
-    for k, v in strain_seqs.items():
-        strain_alleles[k] = [int(a) for a in v]
-
-    for i, s_id in enumerate(used_strains):
-        pop.individual(i).setGenotype(strain_alleles[s_id][:num_loci])
+    # set numeric genotypes
+    for i in range(pop.popSize()):
+        name = strain_names[i % len(strain_names)]
+        pop.individual(i).setGenotype([nuc_int(n) for n in strain_seqs[name][:num_loci]])
     
     #for i, indv in enumerate(pop.individuals()):
     #    print str(i) + ': ' + str(indv.genotype())
     #    print str(i) + ': ' + str(len(indv.genotype()))
     #    print indv
 
+    # evolve
+    print 'evolving'
     #print '\n\npre evolve:'
     #dump(pop)
 
@@ -137,9 +141,14 @@ if __name__ == '__main__':
     #print '\n\npost evolve:'
     #dump(pop)
 
-    #for i, indv in enumerate(pop.individuals()):
-    #    print str(i) + ': ' + str(indv.genotype(chroms=0))
-    #    print str(i) + ': ' + str(len(indv.genotype(chroms=0)))
+    for i, indv in enumerate(pop.individuals()):
+        #print str(i) + ': ' + str(len(indv.genotype(ploidy=0)))
+        #print str(i) + ': ' + str(len(indv.genotype(ploidy=1)))
+        #print str(i) + ': ' + str(len(indv.genotype(chroms=0)))
+        #print str(i) + ': ' + str(len(indv.genotype(chroms=1)))
+        #print str(i) + ': ' + str(len(indv.genotype(chroms=2)))
+        #print str(i) + ': ' + str(indv.genotype(chroms=0)[:1000])
+        pass
     #    print indv
 
 
