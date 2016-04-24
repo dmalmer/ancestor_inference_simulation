@@ -129,10 +129,52 @@ if __name__ == '__main__':
                     final_segments[desc_ind].append((strain, anc_num, start, end))
                 f_nuc.write('\n')
 
+    #make final segments same length
+    if len(final_segments[-2]) > len(final_segments[-1]):
+        final_segments[-1].extend([('_', -1, -1, -1)] * (len(final_segments[-2]) - len(final_segments[-1])))
+    else:
+        final_segments[-2].extend([('_', -1, -1, -1)] * (len(final_segments[-1]) - len(final_segments[-2])))
+
     #output final segments
-    print '\nploidy 0\t\t\t\t\tploidy 1'
-    for ((strain_0, anc_num_0, start_0, end_0), (strain_1, anc_num_1, start_1, end_1)) in zip(final_segments[-2], final_segments[-1]):
+    # determine collapsed final segments as we're outputing uncollapsed segments
+    collapsed_final_segments = {-2: [], -1: []}
+    curr_strain_0, _, curr_start_0, curr_end_0 = final_segments[-2][0]
+    curr_strain_1, _, curr_start_1, curr_end_1 = final_segments[-1][0]
+
+    print '\nuncollapsed:'
+    print 'ploidy 0\t\t\t\t\tploidy 1'
+    for i, ((strain_0, anc_num_0, start_0, end_0), (strain_1, anc_num_1, start_1, end_1)) in enumerate(zip(final_segments[-2], final_segments[-1])):
         print '%i - %i: %i_%s' % (start_0, end_0, anc_num_0, strain_0),
         print '\t\t\t',
         print '%i - %i: %i_%s' % (start_1, end_1, anc_num_1, strain_1)
+
+        if i == 0:
+            continue
+
+        if strain_0 != '_' and curr_strain_0 != strain_0:
+            collapsed_final_segments[-2].append((curr_strain_0, curr_start_0, curr_end_0))
+            curr_strain_0, curr_start_0, curr_end_0 = strain_0, start_0, end_0
+        elif end_0 != -1:
+            curr_end_0 = end_0
+
+        if strain_1 != '_' and curr_strain_1 != strain_1:
+            collapsed_final_segments[-1].append((curr_strain_1, curr_start_1, curr_end_1))
+            curr_strain_1, curr_start_1, curr_end_1 = strain_1, start_1, end_1
+        elif end_1 != -1:
+            curr_end_1 = end_1
+
+    #make collapsed final segments same length
+    collapsed_final_segments[-2].append((curr_strain_0, curr_start_0, curr_end_0))
+    collapsed_final_segments[-1].append((curr_strain_1, curr_start_1, curr_end_1))
+    if len(collapsed_final_segments[-2]) > len(collapsed_final_segments[-1]):
+        collapsed_final_segments[-1].extend([('_', -1, -1)] * (len(collapsed_final_segments[-2]) - len(collapsed_final_segments[-1])))
+    else:
+        collapsed_final_segments[-2].extend([('_', -1, -1)] * (len(collapsed_final_segments[-1]) - len(collapsed_final_segments[-2])))
+
+    print '\ncollapsed:'
+    print 'ploidy 0\t\t\t\t\tploidy 1'
+    for ((strain_0, start_0, end_0), (strain_1, start_1, end_1)) in zip(collapsed_final_segments[-2], collapsed_final_segments[-1]):
+        print '%i - %i: %s' % (start_0, end_0, strain_0),
+        print '\t\t\t',
+        print '%i - %i: %s' % (start_1, end_1, strain_1)
 
