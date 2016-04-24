@@ -65,14 +65,15 @@ if __name__ == '__main__':
     recomb_file_or_val = 'data/mouse_recomb_rates.csv'
     #recomb_file_or_val = '.00001'
     #recomb_file_or_val = '.01'
-    pop_size = 20
+    pop_size = 24
     num_gens = 20
     chrom = 19
     num_loci = -1
+    #num_loci = 100
 
     strain_seqs = {}
-    #strain_names = ('AKRJ', 'AJ', 'BALBcJ', 'C3HHeJ', 'CASTEiJ', 'CBAJ', 'DBA2J', 'LPJ')
-    strain_names = ('AKRJ', 'AJ', 'BALBcJ', 'C3HHeJ')
+    strain_names = ('AKRJ', 'AJ', 'BALBcJ', 'C3HHeJ', 'CASTEiJ', 'CBAJ', 'DBA2J', 'LPJ')
+    #strain_names = ('AKRJ', 'AJ', 'BALBcJ', 'C3HHeJ')
 
     # read fasta files
     print 'reading fastas'
@@ -94,7 +95,6 @@ if __name__ == '__main__':
     # create population
     print 'creating population' 
     pop = Population(size=pop_size, ploidy=2, loci=num_loci, alleleNames=['A','T','C','G','N'], 
-                    #infoFields=['father_idx', 'mother_idx', 'child_idx'])
                     infoFields=['ind_id'])
     for i in range(0, pop.popSize(), 2):
         pop.individual(i).setSex(MALE)
@@ -105,12 +105,11 @@ if __name__ == '__main__':
     for i in range(pop.popSize()):
         name = strain_names[i % len(strain_names)]
         pop.individual(i).setGenotype([nuc_int(n) for n in strain_seqs[name][:num_loci]])
+        #tmp = 3500000 + i*100
+        #pop.individual(i).setGenotype([nuc_int(n) for n in strain_seqs[name][tmp:tmp+num_loci]])
 
-    # evolve
-    print 'evolving'
-    #print '\n\npre evolve:'
-    #dump(pop)
-
+    # random mating
+    print 'random mating'
     pop.evolve(
             initOps=[
                 sim.InitSex(sex=(sim.MALE, sim.FEMALE)),
@@ -121,26 +120,22 @@ if __name__ == '__main__':
                 sexMode=(sim.NUM_OF_MALES, 1),
                 ops=[
                         sim.IdTagger(),
-                        sim.Recombinator(rates=recomb_rates, output='>>data/recombs_r%s_g%i.log' % (recomb_str, num_gens), 
+                        sim.Recombinator(rates=recomb_rates, output='>>data/recombs_rand-mating_r%s_g%i.log' % (recomb_str, num_gens), 
                                          infoFields=['ind_id']),
-
                     ]
             ),
             gen=num_gens
         )
 
-    #print pop.subPopSize()
+    print 'output final indv sequences'
+    #grab last individual from population
+    indv = pop.individual(pop.popSize()-1)
 
-    #print '\n\npost evolve:'
-    #dump(pop)
+    with open('./data/last-indv-seq_0.nuc', 'w') as f:
+        f.write(''.join(map(str, indv.genotype(ploidy=0))).replace('0','A').replace('1','T').replace('2','C').replace('3','G').replace('4','N'))
+        f.write('\n')
 
-    #for i, indv in enumerate(pop.individuals()):
-        #print str(i) + ': ' + str(len(indv.genotype(ploidy=0)))
-        #print str(i) + ': ' + str(len(indv.genotype(ploidy=1)))
-        #print str(i) + ': ' + str(len(indv.genotype(chroms=0)))
-        #print str(i) + ': ' + str(len(indv.genotype(chroms=1)))
-        #print str(i) + ': ' + str(len(indv.genotype(chroms=2)))
-        #print str(i) + ': ' + str(indv.genotype(chroms=0)[:1000])
-    #    print indv
-
+    with open('./data/last-indv-seq_1.nuc', 'w') as f:
+        f.write(''.join(map(str, indv.genotype(ploidy=1))).replace('0','A').replace('1','T').replace('2','C').replace('3','G').replace('4','N'))
+        f.write('\n')
 
