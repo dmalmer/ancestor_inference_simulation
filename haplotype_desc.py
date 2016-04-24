@@ -47,76 +47,87 @@ def pairwise(iterable):
 if __name__ == '__main__':
 
     #RECOMB_FILE = 'data/recombs_r1e-05_g20.log'
-    RECOMB_FILE = 'data/recombs_rmouse_g20.log'
+    RECOMB_FILE = 'data/recombs_rand-mating_rmouse_g20.log'
     #RECOMB_FILE = 'data/recombs_r0.01_g20.log'
-
     CHROM = 19
-    
-    COLLAPSE_FINAL_HAPLOTYPES = False
 
     # re-trace what parts of each genome came from which ancestor using the recombination file output by simuPOP
     print 'reading recomb file'
     genomes = [] #index+1 = indv ID
-    with open(RECOMB_FILE,'r') as f:
-        cols = f.readline().strip().split()
-        first_gen = int(cols[0])
+    genomes = open(RECOMB_FILE,'r').readlines()
+    #for g in genomes:
+    #    print g
+    #print '\n\n\n'
 
-        #set ancestor genomes
-        for a in range(1, first_gen):
-            genomes.append({c: [[0],[a]] for c in (0, 1)})  
+    anc_pop = int(genomes[0].split()[0]) - 1
 
-        #set first gen genomes (ancestors are homozygous, so ignore recombs)
-        while int(cols[1]) < first_gen:
-            genomes.append({})
-            genomes[-1][0] = [[0],[int(cols[1])]]  
-            cols = f.readline().strip().split()
-            genomes[-1][1] = [[0],[int(cols[1])]]  
+    def parent_index(parent, ploidy, anc_pop):
+        #return index of genomes[] list that corresponds to parent number in recombs.log file
+        return (parent - anc_pop - 1) * 2 + ploidy
+
+
+    #only care about last genome, start from there and work backwords
+    #only looking at ploidy 1 for now
+    #haplotypes = [(pos1, parent1, ploidy1), (pos2, parent2, ploidy2), ..., (posN, parentN, ploidyN)]]
+    # last line
+    init_line = genomes[-1].strip().split()
+    parent = int(init_line[1])
+    ploidy = int(init_line[2])
+    curr_haplotypes = [(0, parent, ploidy)]
+    for recomb in init_line[3:]:
+        curr_haplotypes.append((int(recomb), parent, abs(ploidy-1)))
+    
+    print 'starting haplotypes:'
+    print curr_haplotypes
+
+    # replace segments with their parent segments until we're only left with original ancestors
+    while not all([hap[1] <= anc_pop for hap in curr_haplotypes]):
+        print '\n'
+        print 'truth check'
+        print [hap[1] <= anc_pop for hap in curr_haplotypes]
+        print curr_haplotypes
+        new_haplotypes = list(curr_haplotypes)
+
+        #keep track of i offset as we insert new parental haplotypes
+        offset = 0 
+        for i, (curr_pos, curr_parent, curr_ploidy) in enumerate(curr_haplotypes):
+            print ''
+            print 'hap', i
+            #get ending position of current haplotype we are replacing with parent haplotypes
+            hap_end_pos = curr_haplotypes[i+1][0] if i+1 < len(curr_haplotypes) else -1
+            #get parent line of current haplotype
+            print 'parent index', parent_index(curr_parent, curr_ploidy, anc_pop)
+            parent_line = genomes[parent_index(curr_parent, curr_ploidy, anc_pop)].strip().split()
+            print parent_line
             
-            cols = f.readline().strip().split()
+            #replace the current haplotype with its parent haplotypes
+            new_parent = int(parent_line[1])
+            new_ploidy = int(parent_line[2])
+            new_recombs = [int(r) for r in parent_line[3:]]
+            # first, loop through parent recombinations until we get to the current position
+           # this gets us to the correct ploidy of the parent at the current position
+            for recomb in [r for r in new_recombs if r < curr_pos]:
+                new_ploidy = abs(new_ploidy-1)
+            # now, replace the current haplotype with the first parent haplotype
+            new_haplotypes[i+offset] = (curr_pos, new_parent, new_ploidy)
+            # next, loop through the rest of the parent recombinations until we reach the end of the current haplotype
+            for recomb in [r for r in new_recombs if r > curr_pos and (hap_end_pos == -1 or r < hap_end_pos)]:
+                offset += 1
+                new_ploidy = abs(new_ploidy-1)
+                new_haplotypes.insert(i+offset, (recomb, new_parent, new_ploidy))
+            print 'end of round haplotypes:'
+            print new_haplotypes
+            
+        curr_haplotypes = new_haplotypes
+        #break
+        
+    print ''
+    print 'final haplotypes'
+    print curr_haplotypes
+    print ''
 
-        #set rest of genomes
-        while len(cols) > 0:
-            genomes.append({})
-            for g_chrom in (0, 1):
-                parent = genomes[int(cols[1])-1] 
-                curr_c = int(cols[2])
-                new_pos = [parent[curr_c][0][0]] #always 0
-                new_anc = [parent[curr_c][1][0]]
-                p_i = [0, 0]
-                p_i[curr_c] += 1
-                for r in cols[3:]:
-                    r = int(r)
-                    #add anc info from before recomb
-                    while p_i[curr_c] < len(parent[curr_c][0]) and parent[curr_c][0][p_i[curr_c]] < r:
-                        if parent[curr_c][0][p_i[curr_c]] > new_pos[-1]:
-                            new_pos.append(parent[curr_c][0][p_i[curr_c]])
-                            new_anc.append(parent[curr_c][1][p_i[curr_c]])
-                        p_i[curr_c] += 1
-                    #add recomb
-                    new_pos.append(r)
-                    curr_c = abs(curr_c - 1)
-                    #  catch other chrom parent index to current position 
-                    while p_i[curr_c] < len(parent[curr_c][0])-1 and parent[curr_c][0][p_i[curr_c]+1] < r:
-                        p_i[curr_c] += 1
-                    if p_i[curr_c] < len(parent[curr_c][1]):
-                        new_anc.append(parent[curr_c][1][p_i[curr_c]])
-                    else:
-                        #if the recombination switches to a chrom that is already completely iterated over, we need to simply
-                        # add the last ancestor
-                        new_anc.append(parent[curr_c][1][-1])
-
-                #add rest of parent after all recombinations
-                new_pos.extend(parent[curr_c][0][p_i[curr_c]+1:])
-                new_anc.extend(parent[curr_c][1][p_i[curr_c]+1:])
-                
-                #collapse adjacent positions with the same ancestor and add to genomes list
-                genomes[-1][g_chrom] = [[new_pos[0]], [new_anc[0]]]
-                for n_p, n_a in zip(new_pos[1:], new_anc[1:]):
-                    if n_a != genomes[-1][g_chrom][1][-1]:
-                        genomes[-1][g_chrom][0].append(n_p)
-                        genomes[-1][g_chrom][1].append(n_a)
-
-                cols = f.readline().strip().split()
+    for h in curr_haplotypes:
+        print h
 
     # output descendant sequence and ancestral haplotypes
     strain_seqs = {}
@@ -133,17 +144,15 @@ if __name__ == '__main__':
     #  write descendant sequence and each segment's ancestral origin
     print 'writing output'
     num_loci = len(strain_seqs[strain_names[0]])
-    haplotypes = [] #list of tuples, (start, end, strain_name) of each segment
-    with open('data/desc_seq.nuc', 'w') as f:
-        for (start, end), anc_num in zip(pairwise(genomes[-1][0][0] + [num_loci]), genomes[-1][0][1]):
-            anc_index = (anc_num-1) % len(strain_names) #ancs are indexed starting at 1 in recomb file
-            #write nucleotide sequence
-            f.write(strain_seqs[strain_names[anc_index]][start:end]) 
-            #record ancestral haplotype
-            haplotypes.append((start, end, strain_names[anc_index]))
-        #f.write('-' * (len(strain_seqs[strain_names[0]]) - len(desc_seq)) + '\n')
-
-    with open('data/desc_segments.bed', 'w') as f:
+    with open('data/desc_segments.bed', 'w') as f_bed:
+        with open('data/desc_seq.nuc', 'w') as f_nuc:
+            for (start, anc_num, _), (end, _, _) in pairwise(curr_haplotypes + [(num_loci, -1, -1)]):
+                print anc_num, start, end
+                strain = strain_names[(anc_num-1) % len(strain_names)] #ancs are indexed starting at 1 in recomb file
+                f_bed.write('chr%i\t%s\t%i\t%i\n' % (CHROM, strain, start, end))
+                f_nuc.write(strain_seqs[strain][start:end]) 
+            f_nuc.write('\n')
+'''
         curr_start, curr_end, curr_anc = haplotypes[0]
         for start, end, anc in haplotypes[1:]:
             if COLLAPSE_FINAL_HAPLOTYPES:
@@ -160,4 +169,4 @@ if __name__ == '__main__':
                 f.write('chr%i\t%s\t%s\t%s\n' % (CHROM, curr_start, curr_end, curr_anc))
                 curr_start, curr_end, curr_anc = start, end, anc
         f.write('chr%i\t%s\t%s\t%s\n' % (CHROM, curr_start, curr_end, curr_anc))
-
+'''
