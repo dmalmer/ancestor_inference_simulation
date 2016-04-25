@@ -1,7 +1,12 @@
 
-Ancestor HMM yeast breeding simulation
+Breeding simulation for testing ancestoral haplotype inference algorithms
 
-sim.py -> data/recombs_r<rate>_g<gen>.log
-haplotype_desc.py (need to change RECOMB_FILE var) -> data/desc_seq.nuc, data/desc_segments.bed
-call_SNPs.py -> data/sim_SNPs.bed
+1) sim.py -> data/recombs_rand-mating_r<rate>_g<gen>.log
+          -> data/recombs_sib-mating_r<rate>_g<gen>.log
+          -> data/recombs_full-mating_r<rate>_g<gen>.log (combined random and sibling mating)
+
+2) haplotype_desc.py -> data/desc_seq.nuc
+                     -> data/desc_segments.bed
+
+3) call_SNPs.py -> data/sim_SNPs.bed
 
