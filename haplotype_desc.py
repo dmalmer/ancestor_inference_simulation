@@ -52,8 +52,11 @@ def parent_index(parent, ploidy, anc_pop):
 
 
 if __name__ == '__main__':
+    #wkdir = '/Users/dama9282/simulation/'
+    wkdir = './'
+
     #get most recently created recombs file
-    recomb_file = sorted(filter(path.isfile, glob('./data/recombs_*.log')), key=lambda x: path.getmtime(x))[-1]
+    recomb_file = sorted(filter(path.isfile, glob(wkdir + './data/recombs_full*.log')), key=lambda x: path.getmtime(x))[-1]
     strain_names = ('AKRJ', 'AJ', 'BALBcJ', 'C3HHeJ', 'CASTEiJ', 'CBAJ', 'DBA2J', 'LPJ')
     chrom = 19
 
@@ -113,14 +116,14 @@ if __name__ == '__main__':
 
         #  read fasta files
         for name in strain_names:
-            with open('./data/mouse_fastas/%s_chr%i.fa' % (name, chrom)) as f:
+            with open(wkdir + './data/mouse_fastas/%s_chr%i.fa' % (name, chrom)) as f:
                 f.readline()
                 strain_seqs[name] = f.readline().strip()
 
         #  write descendant sequence and each segment's ancestral origin
         num_loci = len(strain_seqs[strain_names[0]])
-        with open('data/desc_segments.bed', 'w') as f_bed:
-            with open('data/desc_seq.nuc', 'w') as f_nuc:
+        with open(wkdir + 'data/desc_segments.bed', 'w') as f_bed:
+            with open(wkdir + 'data/desc_seq.nuc', 'w') as f_nuc:
                 for (start, anc_num, _), (end, _, _) in pairwise(curr_haplotypes + [(num_loci, -1, -1)]):
                     strain = strain_names[(anc_num-1) % len(strain_names)] #ancs are indexed starting at 1 in recomb file
                     f_bed.write('chr%i\t%s\t%i\t%i\n' % (chrom, strain, start, end))
