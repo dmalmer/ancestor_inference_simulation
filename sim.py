@@ -64,12 +64,14 @@ if __name__ == '__main__':
     # intialize
     debug = True
 
-    #wkdir = '/Users/dama9282/simulation/'
+    #wkdir = '/scratch/Users/dama9282/simulation/'
     wkdir = './'
 
     recomb_file_or_val = wkdir + 'data/mouse_recomb_rates.csv'
+    mut_rate = 1.8 * (10 ** -8) #assume uniform mutation rate
     if debug:
         recomb_file_or_val = '.01'
+        mut_rate = .01
     pop_size = 96
     num_rand_gens = 20
     num_sib_gens = 30
@@ -124,6 +126,13 @@ if __name__ == '__main__':
                 sim.InitSex(sex=(sim.MALE, sim.FEMALE)),
                 sim.IdTagger(),
                 ],
+            preOps=sim.MatrixMutator(rate = [ 
+                    #mutate A/C/T/G, but not N
+                    [0, mut_rate, mut_rate, mut_rate],
+                    [mut_rate, 0, mut_rate, mut_rate],
+                    [mut_rate, mut_rate, 0, mut_rate],
+                    [mut_rate, mut_rate, mut_rate, 0],
+                ]),
             matingScheme=sim.RandomMating(
                 numOffspring=2,
                 sexMode=(sim.NUM_OF_MALES, 1),
@@ -168,6 +177,13 @@ if __name__ == '__main__':
                 sim.InitSex(sex=(sim.MALE, sim.FEMALE)),
                 sim.IdTagger(),
                 ],
+            preOps=sim.MatrixMutator(rate = [ 
+                    #mutate A/C/T/G, but not N
+                    [0, mut_rate, mut_rate, mut_rate],
+                    [mut_rate, 0, mut_rate, mut_rate],
+                    [mut_rate, mut_rate, 0, mut_rate],
+                    [mut_rate, mut_rate, mut_rate, 0],
+                ]),
             matingScheme=sim.MonogamousMating(
                 numOffspring=2,
                 sexMode=(sim.NUM_OF_MALES, 1),
