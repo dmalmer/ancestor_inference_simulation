@@ -1,39 +1,4 @@
 
-'''
-each indv is a dictionary of the left and right chromosomes
-each chrom is a pair of lists, the first showing the starting position of a new ancestor, the other showing which ancestor is at that position
-
-ancestors 1 and 2 (homozygous at all positions):
-1 = {'0': [[0],
-          [1]]
-     '1': [[0],
-          [1]]}
-2 = {'0': [[0],
-          [2]]
-     '1': [[0],
-          [2]]}
-
-first generation (special case, each chrom is the exact sequence from an ancestor, so ignore recombs):
-3 = {'0': [[0],
-          [1]]
-     '1': [[0],
-          [2]]}
-4 = {'0': [[0],
-          [2]]
-     '1': [[0],
-          [1]]}
-
-next generations will have recombination events:
-5 = {'0': [[0, 20, 80],
-          [1, 2, 1]]
-     '1': [[0, 60],
-          [2, 1]]}
-6 = {'0': [[0, 50],
-          [2, 1]]
-     '1': [[0, 30],
-          [1, 2]]}
-'''
-
 from itertools import tee, izip
 from glob import glob
 from os import path
@@ -52,7 +17,7 @@ def parent_index(parent, ploidy, anc_pop):
 
 
 if __name__ == '__main__':
-    #wkdir = '/Users/dama9282/simulation/'
+    #wkdir = '/scratch/Users/dama9282/simulation/'
     wkdir = './'
 
     #get most recently created recombs file
