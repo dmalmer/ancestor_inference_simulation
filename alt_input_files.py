@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
     #write HAPPY input files
     # write alleles file
-    with open('./data/HAPPY_markers.csv', 'w') as f:
+    with open('./data/HAPPY_ancestors.alleles', 'w') as f:
         f.write('markers %i strains %i\n' % (len(SNP_names), len(unique_ancs)))
         f.write('strain_names %s\n' % '\t'.join(sorted_ancs))
         curr_cM_pos = 0.
@@ -147,12 +147,9 @@ if __name__ == '__main__':
             f.write('allele\t1\t%s\n' % '\t'.join(['%.3f' % (val/tot_have) for val in have_SNP]))
     
     # write data file (ped format)
-
-         
-
-
-
-
-
-
+    with open('./data/HAPPY_desc.ped', 'w') as f:
+        #HAPPY uses the ped format, but only reads indv-id and phenotype, then columns after phenotype are the genotypes
+        # of all the genetic markers (two for each marker)
+        genotypes = [str(int(a)-1) for a in desc_alleles for _ in (0, 1)]
+        f.write('fam\tDESC\tp\tp\ts\tNA\t%s\n' % '\t'.join(genotypes))
 
