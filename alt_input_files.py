@@ -115,9 +115,9 @@ if __name__ == '__main__':
             else:
                 anc_alleles[anc].append('1')
         if 'DESC' in ancs:
-            desc_alleles.append('2')
+            desc_alleles.append('22')
         else:
-            desc_alleles.append('1')
+            desc_alleles.append('11')
 
     with open('./data/RABBIT_markers.csv', 'w') as f:
         f.write('#founders,%i\n' % len(unique_ancs))
@@ -130,6 +130,7 @@ if __name__ == '__main__':
 
     #write HAPPY input files
     # write alleles file
+    desc_genotypes = []
     with open('./data/HAPPY_ancestors.alleles', 'w') as f:
         f.write('markers %i strains %i\n' % (len(SNP_names), len(unique_ancs)))
         f.write('strain_names %s\n' % '\t'.join(sorted_ancs))
@@ -145,11 +146,16 @@ if __name__ == '__main__':
             tot_have = len(sorted_ancs) - tot_missing
             f.write('allele\t0\t%s\n' % '\t'.join(['%.3f' % (val/tot_missing) for val in missing_SNP]))
             f.write('allele\t1\t%s\n' % '\t'.join(['%.3f' % (val/tot_have) for val in have_SNP]))
-    
+            
+            #descendant ped file needs 2 genotypes for each position
+            if 'DESC' in ancs:
+                desc_genotypes.extend(['1', '1'])
+            else:
+                desc_genotypes.extend(['0', '0'])
+
     # write data file (ped format)
     with open('./data/HAPPY_desc.ped', 'w') as f:
         #HAPPY uses the ped format, but only reads indv-id and phenotype, then columns after phenotype are the genotypes
         # of all the genetic markers (two for each marker)
-        genotypes = [str(int(a)-1) for a in desc_alleles for _ in (0, 1)]
-        f.write('fam\tDESC\tp\tp\ts\tNA\t%s\n' % '\t'.join(genotypes))
+        f.write('fam\tDESC\tp\tp\ts\tNA\t%s\n' % '\t'.join(desc_genotypes))
 
