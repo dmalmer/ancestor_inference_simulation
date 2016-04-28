@@ -72,8 +72,6 @@ def genetic_distance(SNP_start, SNP_end, recomb_main_i, recomb_map):
     return genetic_dist, recomb_main_i
 
 
-
-
 if __name__ == '__main__':
     chrom = 'chr19'
 
@@ -105,9 +103,11 @@ if __name__ == '__main__':
     cM_dists = []
     anc_alleles = {anc: [] for anc in unique_ancs}
     desc_alleles = []
+    curr_cM_pos = 0.
     for (pos, ancs), dist in zip(SNPs_by_chr[chrom], genetic_distances):
         SNP_names.append('pos%i' % pos)
-        cM_dists.append('%.8f' % dist)
+        curr_cM_pos += dist
+        cM_dists.append('%.8f' % curr_cM_pos)
 
         for anc in unique_ancs:
             if anc in ancs:
@@ -128,6 +128,27 @@ if __name__ == '__main__':
             f.write('%s,%s\n' % (anc, ','.join(anc_alleles[anc])))
         f.write('DESC,%s\n' % ','.join(desc_alleles))
 
+    #write HAPPY input files
+    # write alleles file
+    with open('./data/HAPPY_markers.csv', 'w') as f:
+        f.write('markers %i strains %i\n' % (len(SNP_names), len(unique_ancs)))
+        f.write('strain_names %s\n' % '\t'.join(sorted_ancs))
+        curr_cM_pos = 0.
+        for i, ((pos, ancs), dist) in enumerate(zip(SNPs_by_chr[chrom], genetic_distances)):
+            curr_cM_pos += dist
+            f.write('marker pos%i 2 %.8f\n' % (pos, curr_cM_pos))
+            #create arrays of 1. and 0. corresponding to if the ancestor contains or doesn't contain the current SNP
+            missing_SNP = [float(a not in ancs) for a in sorted_ancs]
+            have_SNP = [float(a in ancs) for a in sorted_ancs]
+            #divide the 1's by the total number of 1's to get the probability of that allele (eg. five 1's turn into .2's)
+            tot_missing = len([val for val in missing_SNP if val == 1.])
+            tot_have = len(sorted_ancs) - tot_missing
+            f.write('allele\t0\t%s\n' % '\t'.join(['%.3f' % (val/tot_missing) for val in missing_SNP]))
+            f.write('allele\t1\t%s\n' % '\t'.join(['%.3f' % (val/tot_have) for val in have_SNP]))
+    
+    # write data file (ped format)
+
+         
 
 
 
