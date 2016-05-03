@@ -2,6 +2,8 @@
 from itertools import tee, izip
 from glob import glob
 from os import path
+from random import random, sample
+import sys
 
 
 def pairwise(iterable):
@@ -16,14 +18,24 @@ def parent_index(parent, ploidy, anc_pop):
     return (parent - anc_pop - 1) * 2 + ploidy
 
 
+def uniform_err(n, err):
+    if random() > err:
+        return n
+    return sample([a for a in ('A', 'T', 'C', 'G') if a != n], 1)[0]
+
+
 if __name__ == '__main__':
-    #wkdir = '/scratch/Users/dama9282/simulation/'
-    wkdir = './'
+    wkdir = '/scratch/Users/dama9282/simulation/'
+    #wkdir = './'
+    
+    recomb_str = '_%s' % sys.argv[1] if len(sys.argv) > 1 else ''    
 
     #get most recently created recombs file
-    recomb_file = sorted(filter(path.isfile, glob(wkdir + './data/recombs_full*.log')), key=lambda x: path.getmtime(x))[-1]
+    recomb_file = sorted(filter(path.isfile, glob(wkdir + './data/recombs_full*%s.log' % recomb_str)), key=lambda x: path.getmtime(x))[-1]
     strain_names = ('AKRJ', 'AJ', 'BALBcJ', 'C3HHeJ', 'CASTEiJ', 'CBAJ', 'DBA2J', 'LPJ')
-    chrom = 19
+    
+    chrom = 1
+    err = .005
 
     # re-trace what parts of each genome came from which ancestor using the recombination file output by simuPOP
     print 'reading recomb file: ' + recomb_file
@@ -87,15 +99,19 @@ if __name__ == '__main__':
 
         #  write descendant sequence and each segment's ancestral origin
         num_loci = len(strain_seqs[strain_names[0]])
-        with open(wkdir + 'data/desc_segments.bed', 'w') as f_bed:
-            with open(wkdir + 'data/desc_seq.nuc', 'w') as f_nuc:
-                for (start, anc_num, _), (end, _, _) in pairwise(curr_haplotypes + [(num_loci, -1, -1)]):
-                    strain = strain_names[(anc_num-1) % len(strain_names)] #ancs are indexed starting at 1 in recomb file
-                    f_bed.write('chr%i\t%s\t%i\t%i\n' % (chrom, strain, start, end))
-                    f_nuc.write(strain_seqs[strain][start:end]) 
+        with open(wkdir + 'data/desc_segments%s.bed' % recomb_str, 'w') as f_bed:
+            with open(wkdir + 'data/desc_seq%s.nuc' % recomb_str, 'w') as f_nuc:
+                with open(wkdir + 'data/desc_seq_err%s.nuc' % recomb_str, 'w') as f_err:
+                    for (start, anc_num, _), (end, _, _) in pairwise(curr_haplotypes + [(num_loci, -1, -1)]):
+                        strain = strain_names[(anc_num-1) % len(strain_names)] #ancs are indexed starting at 1 in recomb file
+                        f_bed.write('chr%i\t%s\t%i\t%i\n' % (chrom, strain, start, end))
+                        f_nuc.write(strain_seqs[strain][start:end]) 
 
-                    final_segments[desc_ind].append((strain, anc_num, start, end))
-                f_nuc.write('\n')
+                        #apply uniform genotype error
+                        f_err.write(''.join([uniform_err(n, err) for n in strain_seqs[strain][start:end]]))
+
+                        final_segments[desc_ind].append((strain, anc_num, start, end))
+                    f_nuc.write('\n')
 
     #make final segments same length
     if len(final_segments[-2]) > len(final_segments[-1]):
