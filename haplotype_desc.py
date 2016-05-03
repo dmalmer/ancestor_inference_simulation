@@ -28,10 +28,10 @@ if __name__ == '__main__':
     wkdir = '/scratch/Users/dama9282/simulation/'
     #wkdir = './'
     
-    recomb_str = '_%s' % sys.argv[1] if len(sys.argv) > 1 else ''    
+    append_str = '_%s' % sys.argv[1] if len(sys.argv) > 1 else ''    
 
     #get most recently created recombs file
-    recomb_file = sorted(filter(path.isfile, glob(wkdir + './data/recombs_full*%s.log' % recomb_str)), key=lambda x: path.getmtime(x))[-1]
+    recomb_file = sorted(filter(path.isfile, glob(wkdir + './data/recombs_full*%s.log' % append_str)), key=lambda x: path.getmtime(x))[-1]
     strain_names = ('AKRJ', 'AJ', 'BALBcJ', 'C3HHeJ', 'CASTEiJ', 'CBAJ', 'DBA2J', 'LPJ')
     
     chrom = 1
@@ -99,9 +99,9 @@ if __name__ == '__main__':
 
         #  write descendant sequence and each segment's ancestral origin
         num_loci = len(strain_seqs[strain_names[0]])
-        with open(wkdir + 'data/desc_segments%s.bed' % recomb_str, 'w') as f_bed:
-            with open(wkdir + 'data/desc_seq%s.nuc' % recomb_str, 'w') as f_nuc:
-                with open(wkdir + 'data/desc_seq_err%s.nuc' % recomb_str, 'w') as f_err:
+        with open(wkdir + 'data/desc_segments%s.bed' % append_str, 'w') as f_bed:
+            with open(wkdir + 'data/desc_seq%s.nuc' % append_str, 'w') as f_nuc:
+                with open(wkdir + 'data/desc_seq_err%s.nuc' % append_str, 'w') as f_err:
                     for (start, anc_num, _), (end, _, _) in pairwise(curr_haplotypes + [(num_loci, -1, -1)]):
                         strain = strain_names[(anc_num-1) % len(strain_names)] #ancs are indexed starting at 1 in recomb file
                         f_bed.write('chr%i\t%s\t%i\t%i\n' % (chrom, strain, start, end))

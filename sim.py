@@ -2,6 +2,7 @@
 import simuPOP as sim
 from simuPOP import *
 from shutil import copyfile
+import sys
 
 def read_recomb_rates(filename, num_loci, chrom=None):
     #return list of recomb rate at each position
@@ -51,15 +52,6 @@ def nuc_int(nuc):
     return 4
 
 
-def compare_seqs(seqA, seqB):
-    assert(len(seqA) == len(seqB))
-    matches = 0
-    for a, b in zip(seqA, seqB):
-        if a == b:
-            matches += 1
-    return float(matches)/len(seqA)
-
-
 if __name__ == '__main__':
     # intialize
     debug = True
@@ -67,15 +59,17 @@ if __name__ == '__main__':
     #wkdir = '/scratch/Users/dama9282/simulation/'
     wkdir = './'
 
+    output_str = '_%s' % sys.argv[1] if len(sys.argv) > 1 else ''    
+
     recomb_file_or_val = wkdir + 'data/mouse_recomb_rates.csv'
-    mut_rate = 1.8 * (10 ** -8) #assume uniform mutation rate
+    mut_rate = 1.1 * (10 ** -8) #assume uniform mutation rate
     if debug:
         recomb_file_or_val = '.01'
         mut_rate = .01
-    pop_size = 96
-    num_rand_gens = 20
+    pop_size = 192
+    num_rand_gens = 40
     num_sib_gens = 30
-    chrom = 19
+    chrom = 1
     num_loci = -1
     if debug:
         num_loci = 100
@@ -138,39 +132,34 @@ if __name__ == '__main__':
                 sexMode=(sim.NUM_OF_MALES, 1),
                 ops=[
                         sim.IdTagger(),
-                        sim.Recombinator(rates=recomb_rates, output='>>' + wkdir + 'data/recombs_rand-mating_r%s_g%i.log' % (recomb_str, num_rand_gens), 
-                                         infoFields=['ind_id']),
+                        sim.Recombinator(rates=recomb_rates, output='>>' + wkdir + 'data/recombs_rand-mating_r%s_g%i%s.log'
+                                                             % (recomb_str, num_rand_gens, output_str), infoFields=['ind_id']),
                     ]
             ),
             gen=num_rand_gens
         )
-
-    print 'output random mating descendant sequences'
     #grab last individual from population
     indv = pop.individual(pop.popSize()-1)
 
-    with open(wkdir + './data/sim-desc-seq_rand-mating_0.nuc', 'w') as f:
-        f.write(''.join(map(str, indv.genotype(ploidy=0))).replace('0','A').replace('1','T').replace('2','C').replace('3','G').replace('4','N'))
-        f.write('\n')
-
-    with open(wkdir + './data/sim-desc-seq_rand-mating_1.nuc', 'w') as f:
-        f.write(''.join(map(str, indv.genotype(ploidy=1))).replace('0','A').replace('1','T').replace('2','C').replace('3','G').replace('4','N'))
-        f.write('\n')
+    #print 'output random mating descendant sequences'
+    #with open(wkdir + './data/sim-desc-seq_rand-mating_0.nuc', 'w') as f:
+    #    f.write(''.join(map(str, indv.genotype(ploidy=0))).replace('0','A').replace('1','T').replace('2','C').replace('3','G').replace('4','N'))
+    #    f.write('\n')
+    #with open(wkdir + './data/sim-desc-seq_rand-mating_1.nuc', 'w') as f:
+    #    f.write(''.join(map(str, indv.genotype(ploidy=1))).replace('0','A').replace('1','T').replace('2','C').replace('3','G').replace('4','N'))
+    #    f.write('\n')
 
     print 'sibling inbreeding'
-
     #create a new population with two copies of that individual (can be considered siblings)
     del pop
     pop = Population(size=2, ploidy=2, loci=num_loci, alleleNames=['A','T','C','G','N'], 
                     infoFields=['ind_id'])
-    print 'pop created'
     #brother
     pop.individual(0).setSex(MALE)
     pop.individual(0).setGenotype(indv.genotype())
     #sister
     pop.individual(1).setSex(FEMALE)
     pop.individual(1).setGenotype(indv.genotype())
-    print 'genotypes set'
 
     pop.evolve(
             initOps=[
@@ -189,30 +178,30 @@ if __name__ == '__main__':
                 sexMode=(sim.NUM_OF_MALES, 1),
                 ops=[
                         sim.IdTagger(),
-                        sim.Recombinator(rates=recomb_rates, output='>>' + wkdir + 'data/recombs_sib-mating_r%s_g%i.log' % (recomb_str, num_sib_gens), 
-                                         infoFields=['ind_id']),
+                        sim.Recombinator(rates=recomb_rates, output='>>' + wkdir + 'data/recombs_sib-mating_r%s_g%i%s.log'
+                                                             % (recomb_str, num_sib_gens, output_str), infoFields=['ind_id']),
 
                     ]
             ),
             gen=num_sib_gens
         )
-
-    print 'output sibling mating descendant sequences'
     #grab last individual from population
     indv = pop.individual(pop.popSize()-1)
-    with open(wkdir + './data/sim-desc-seq_sib-mating_0.nuc', 'w') as f:
-        f.write(''.join(map(str, indv.genotype(ploidy=0))).replace('0','A').replace('1','T').replace('2','C').replace('3','G').replace('4','N'))
-        f.write('\n')
-    with open(wkdir + './data/sim-desc-seq_sib-mating_1.nuc', 'w') as f:
-        f.write(''.join(map(str, indv.genotype(ploidy=1))).replace('0','A').replace('1','T').replace('2','C').replace('3','G').replace('4','N'))
-        f.write('\n')
+
+    #print 'output sibling mating descendant sequences'
+    #with open(wkdir + './data/sim-desc-seq_sib-mating_0.nuc', 'w') as f:
+    #    f.write(''.join(map(str, indv.genotype(ploidy=0))).replace('0','A').replace('1','T').replace('2','C').replace('3','G').replace('4','N'))
+    #    f.write('\n')
+    #with open(wkdir + './data/sim-desc-seq_sib-mating_1.nuc', 'w') as f:
+    #    f.write(''.join(map(str, indv.genotype(ploidy=1))).replace('0','A').replace('1','T').replace('2','C').replace('3','G').replace('4','N'))
+    #    f.write('\n')
 
     print 'combine recomb files'
     #combine random mating and sibling mating recombination files with correct ancestor numbers
-    copyfile(wkdir + './data/recombs_rand-mating_r%s_g%i.log' % (recomb_str, num_rand_gens), 
-             wkdir + './data/recombs_full_r%s_g%i.log' % (recomb_str, num_rand_gens))
+    copyfile(wkdir + './data/recombs_rand-mating_r%s_g%i%s.log' % (recomb_str, num_rand_gens, output_str), 
+             wkdir + './data/recombs_full_r%s_g%i%s.log' % (recomb_str, num_rand_gens, output_str))
 
-    with open(wkdir + './data/recombs_full_r%s_g%s.log' % (recomb_str, num_rand_gens), 'a') as f_full:
+    with open(wkdir + './data/recombs_full_r%s_g%s%s.log' % (recomb_str, num_rand_gens, output_str), 'a') as f_full:
         #add the first siblings as clones of the last descendant (inherit both chromosomes with no crossovers)
         last_desc = pop_size * (num_rand_gens + 1)
         f_full.write('%i %i 0\n' % (last_desc+1, last_desc))
@@ -221,7 +210,7 @@ if __name__ == '__main__':
         f_full.write('%i %i 1\n' % (last_desc+2, last_desc))
         #very conviently, simuPOP increments recomb file generations across multiple populations/evolutions, so all we 
         # have to do is append the sibling mating recomb file to the full file
-        with open(wkdir + './data/recombs_sib-mating_r%s_g%i.log' % (recomb_str, num_sib_gens)) as f_sib:
+        with open(wkdir + './data/recombs_sib-mating_r%s_g%i%s.log' % (recomb_str, num_sib_gens, output_str)) as f_sib:
             for line in f_sib:
                 f_full.write(line)
 
